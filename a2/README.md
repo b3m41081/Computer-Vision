@@ -20,6 +20,14 @@ python3 a2/src/main.py
 - `opencv-python`
 - `numpy`
 
+Setup aus dem Projektordner:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
 
 ## Bedienung
 
@@ -31,8 +39,8 @@ Klickreihenfolge:
 4. `corner 4`
 5. `reference base`
 6. `reference top`
-7. nach Punkt 6 die bekannte Referenzhoehe eintippen
-8. mit `Enter` bestaetigen
+7. nach Punkt 6 die bekannte Referenzhöhe eintippen
+8. mit `Enter` bestätigen
 9. dann Zielbasis und Zielspitze klicken
 10. `target base`
 11. `target top`
@@ -41,9 +49,9 @@ Tasten:
 - `n` nächstes Bild
 - `p` vorheriges Bild
 - `z` zwischen `100%` und `Auto-Scale` wechseln
-- `u` letzten Punkt rueckgaengig machen
-- `r` Punkte des aktuellen Bildes loeschen
-- `e` Referenzhoehe erneut eingeben
+- `u` letzten Punkt rückgängig machen
+- `r` Punkte des aktuellen Bildes löschen
+- `e` Referenzhöhe erneut eingeben
 - `s` Overlay-Bild speichern
 - `Esc` oder `q` beenden
 
@@ -101,7 +109,14 @@ table_bottle01_vanishing_line.png
 
 Dieses Bild enthält die aktuelle geometrische Konstruktion und die gemessenen Objekte.
 
-## Aufgabe berechntet
-![Overlay](img/table_bottle01_vanishing_line.png)
+## Ergebnisse
 
-Berechnet wurden 11.29cm für die Höhe des Bechers 
+Die drei Overlays dokumentieren die Messung inklusive Konstruktion und berechneter Becherhöhe.
+
+| Bild | Geschätzte Becherhöhe | Overlay |
+| --- | ---: | --- |
+| `table_bottle01.jpeg` | `11.29 cm` | [öffnen](img/table_bottle01_vanishing_line.png) |
+| `table_bottle02.jpeg` | `10.29 cm` | [öffnen](img/table_bottle02_vanishing_line.png) |
+| `table_bottle03.jpeg` | `10.07 cm` | [öffnen](img/table_bottle03_vanishing_line.png) |
+
+Der Mittelwert der drei Messungen liegt bei `10.55 cm`. 
