@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A3 Simple Stereo</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <h1>A3 Simple Stereo</h1>
+
+      <section class="control-group">
+
+        <div class="control-row">
+          <label for="algorithm">Algorithm</label>
+          <select id="algorithm">
+            <option value="sgbm">StereoSGBM</option>
+            <option value="bm">StereoBM</option>
+          </select>
+        </div>
+
+        <div class="control-row">
+          <label for="blockSize">Block Size <span id="blockValue" class="value">5</span></label>
+          <input id="blockSize" type="range" min="3" max="51" step="2" value="5">
+        </div>
+
+        <div class="control-row">
+          <label for="uniqueness">Uniqueness Ratio <span id="uniqueValue" class="value">5</span></label>
+          <input id="uniqueness" type="range" min="0" max="40" step="1" value="5">
+        </div>
+
+        <div class="control-row">
+          <label for="minDisparity">Min Disparity <span id="minDispValue" class="value">0</span></label>
+          <input id="minDisparity" type="range" min="-64" max="64" step="1" value="0">
+        </div>
+
+        <div class="control-row">
+          <label for="numDisparities">Num Disparities <span id="numDispValue" class="value">176</span></label>
+          <input id="numDisparities" type="range" min="16" max="320" step="16" value="176">
+        </div>
+
+        <div class="control-row">
+          <label for="speckleWindow">Speckle Window <span id="speckleWindowValue" class="value">100</span></label>
+          <input id="speckleWindow" type="range" min="0" max="400" step="25" value="100">
+        </div>
+
+        <div class="control-row">
+          <label for="speckleRange">Speckle Range <span id="speckleRangeValue" class="value">2</span></label>
+          <input id="speckleRange" type="range" min="0" max="32" step="1" value="2">
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="compute" class="primary">Compute</button>
+        <button id="save">Export</button>
+        
+      </div>
+
+      <section class="control-group load-group">
+        <div class="control-row">
+          <label for="testId">Load Test ID</label>
+          <div class="load-row">
+            <input id="testId" type="number" min="1" step="1" placeholder="e.g. 12">
+            <button id="loadTest">Load</button>
+          </div>
+        </div>
+        <div class="load-actions">
+          <button id="benchmark">Save Test</button>
+        </div>
+      </section>
+    </aside>
+
+    <main>
+      <section class="metrics">
+        <div class="metric">
+          <div class="name">MAE</div>
+          <div id="mae" class="num">-</div>
+        </div>
+        <div class="metric">
+          <div class="name">Bad Pixels</div>
+          <div id="bad3" class="num">-</div>
+        </div>
+      </section>
+
+      <div id="tabs" class="tabs"></div>
+      <section class="viewer">
+        <img id="viewImage" alt="Stereo result view">
+      </section>
+      <div id="status" class="status">Ready.</div>
+
+      <div class="section-header">
+        <div class="section-title">Saved Tests</div>
+        <div class="sort-card">
+          <label for="sortMetric">Sort by</label>
+          <select id="sortMetric">
+            <option value="mae">MAE</option>
+            <option value="bad3">Bad3</option>
+          </select>
+        </div>
+      </div>
+      <div id="benchmarks"></div>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
