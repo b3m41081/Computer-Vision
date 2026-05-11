@@ -158,7 +158,7 @@ The evaluation uses:
 The following results come from the saved tests in
 [a3/output/tests.json](/Users/unknownacc/Documents/Studium/Master/SS/Computer%20Vision/git/Computer-Vision/a3/output/tests.json).
 
-### Best `StereoSGBM` test
+### `StereoSGBM` test
 
 - Test ID: `1`
 - Parameters:
@@ -172,19 +172,19 @@ The following results come from the saved tests in
   - `MAE = 2.06 px`
   - `Bad3 = 8.13%`
 
-### Best `StereoBM` test
+### `StereoBM` test
 
-- Test ID: `5`
+- Test ID: `4`
 - Parameters:
-  - `block_size = 5`
-  - `uniqueness_ratio = 15`
-  - `min_disparity = -4`
-  - `num_disparities = 144`
-  - `speckle_window_size = 175`
-  - `speckle_range = 1`
+  - `block_size = 15`
+  - `uniqueness_ratio = 10`
+  - `min_disparity = 0`
+  - `num_disparities = 176`
+  - `speckle_window_size = 100`
+  - `speckle_range = 2`
 - Metrics:
-  - `MAE = 0.70 px`
-  - `Bad3 = 1.10%`
+  - `MAE = 2.23 px`
+  - `Bad3 = 8.02%`
 
 ### Example comparison images
 
@@ -194,7 +194,7 @@ Best `StereoSGBM` comparison:
 
 Best `StereoBM` comparison:
 
-![Best StereoBM comparison](output/comparison_bm_b51_u3_md0_nd128_sw275_sr2.png)
+![Best StereoBM comparison](output/comparison_bm.png)
 
 ## Technical Pipeline
 
@@ -219,4 +219,3 @@ Z = f * B / (disparity + doffs)
 - For `StereoBM`, `block_size` is corrected to a valid odd value `>= 5`.
 - Invalid disparity values are excluded from evaluation, depth computation, and
   point-cloud export.
-
