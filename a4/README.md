@@ -31,15 +31,6 @@ You can also pass image paths explicitly:
   --right a3/images/artroom_im1.png
 ```
 
-Useful options for difficult own image pairs:
-
-```bash
-.venv/bin/python a4/src/own_stereo_rectification.py \
-  --detector sift \
-  --max-image-size 1400 \
-  --ransac-threshold 1.5
-```
-
 If a reliable calibration `.npz` from A1 or A3 is available, the script can use
 it for calibrated rectification and metric depth:
 
