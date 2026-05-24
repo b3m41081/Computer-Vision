@@ -1,0 +1,11 @@
+depth mode: metric
+unit: m
+focal length px: 1296.296296
+baseline: 0.150000 m
+valid pixels: 280378 / 1960000
+min: 0.762527 m
+p05: 0.839027 m
+median: 8.318479 m
+mean: 24.421709 m
+p95: 111.111107 m
+max: 345.679016 m

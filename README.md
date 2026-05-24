@@ -11,7 +11,8 @@ measurement, and stereo reconstruction.
 .
 ├── a1/   Camera Calibration
 ├── a2/   Single-View Height Measurement
-└── a3/   Simple Stereo
+├── a3/   Simple Stereo
+└── a4/   Own Stereo Rectification
 ```
 
 ### A1: Camera Calibration
@@ -69,6 +70,20 @@ Browser UI:
 
 More details are available in [`a3/README.md`](a3/README.md).
 
+### A4: Own Stereo Rectification
+
+Workshop 4 estimates epipolar geometry from feature matches, rectifies an
+uncalibrated stereo pair, computes disparity on the rectified images, and
+derives a relative or metric depth map.
+
+Run from the project root:
+
+```bash
+.venv/bin/python a4/src/own_stereo_rectification.py
+```
+
+More details are available in [`a4/README.md`](a4/README.md).
+
 ## Requirements
 
 - Python 3
@@ -110,6 +125,11 @@ a3/
 ├── images/               # stereo images and ground truth
 ├── output/               # generated exports and saved tests
 └── src/                  # stereo core and web UI
+
+a4/
+├── images/               # own left/right stereo pair
+├── output/               # rectification, disparity, and depth exports
+└── src/                  # uncalibrated stereo rectification pipeline
 ```
 
 ## Notes
