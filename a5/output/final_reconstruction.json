@@ -1,0 +1,9 @@
+{
+  "source_color": "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a4/output/test_nd256_b7_u10/02_rectified_left.png",
+  "source_depth": "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a4/output/test_nd256_b7_u10/08_depth.npy",
+  "focal_px": 1296.296296,
+  "min_depth_m": 0.8,
+  "max_depth_m": 20.0,
+  "valid_points_before_sampling": 197352,
+  "exported_points": 150000
+}
