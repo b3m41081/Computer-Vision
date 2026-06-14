@@ -1,0 +1,18 @@
+{
+  "model": "depth-anything/DA3-SMALL",
+  "device": "mps",
+  "input_image_count": 4,
+  "input_images": [
+    "frame_0000_00000.00s.jpg",
+    "frame_0019_00005.70s.jpg",
+    "frame_0039_00011.70s.jpg",
+    "frame_0059_00017.70s.jpg"
+  ],
+  "source_video": "IMG_6758.MOV",
+  "confidence_percentile": 20.0,
+  "confidence_threshold": 1.111777,
+  "point_count": 279580,
+  "resolution": 392,
+  "is_metric": false,
+  "elapsed_seconds": 4.325
+}

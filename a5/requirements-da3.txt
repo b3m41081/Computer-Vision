@@ -1,0 +1,17 @@
+torch==2.3.1
+torchvision==0.18.1
+numpy==1.26.4
+Pillow
+opencv-python==4.10.0.84
+huggingface_hub
+einops
+safetensors
+addict
+omegaconf
+trimesh
+imageio
+moviepy==1.0.3
+tqdm
+evo
+e3nn
+plyfile==1.0.3

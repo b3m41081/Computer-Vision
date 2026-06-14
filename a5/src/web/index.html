@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A5 Reconstruction Studio</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="eyebrow">Computer Vision · A5</div>
+      <h1>Reconstruction Studio</h1>
+      <p class="sub">Video-Frames extrahieren, COLMAP und Depth Anything 3 ausführen und beide Punktwolken vergleichen.</p>
+
+      <section class="panel controls">
+        <h2>Eingabe</h2>
+        <label for="video">Video</label>
+        <select id="video"></select>
+
+        <div class="grid two">
+          <div>
+            <label for="interval">Intervall (s)</label>
+            <input id="interval" type="number" value="0.25" min="0.05" max="10" step="0.05">
+          </div>
+          <div>
+            <label for="maxFrames">Max. Frames</label>
+            <input id="maxFrames" type="number" value="100" min="3" max="500" step="1">
+          </div>
+          <div>
+            <label for="blur">Min. Schärfe</label>
+            <input id="blur" type="number" value="40" min="0" max="10000" step="1">
+          </div>
+          <div>
+            <label for="maxSize">Bildgröße</label>
+            <input id="maxSize" type="number" value="1600" min="320" max="4096" step="80">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel controls">
+        <h2>COLMAP</h2>
+        <div class="grid two">
+          <div>
+            <label for="features">SIFT Features</label>
+            <input id="features" type="number" value="2048" min="256" max="16384" step="256">
+          </div>
+          <div>
+            <label for="overlap">Nachbarn</label>
+            <input id="overlap" type="number" value="5" min="1" max="50" step="1">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel controls">
+        <h2>Depth Anything 3</h2>
+        <label for="da3Device">Gerät</label>
+        <select id="da3Device">
+          <option value="auto">Automatisch</option>
+          <option value="cuda">CUDA</option>
+          <option value="mps">Apple MPS</option>
+          <option value="cpu">CPU</option>
+        </select>
+        <label for="da3Model">Modell</label>
+        <select id="da3Model">
+          <option value="depth-anything/DA3-SMALL">DA3 Small (Mac empfohlen)</option>
+          <option value="depth-anything/DA3-BASE">DA3 Base</option>
+          <option value="depth-anything/DA3-LARGE-1.1">DA3 Large 1.1 (CUDA empfohlen)</option>
+        </select>
+        <div class="grid two">
+          <div>
+            <label for="da3Images">Max. Bilder</label>
+            <input id="da3Images" type="number" value="4" min="1" max="100" step="1">
+          </div>
+          <div>
+            <label for="da3Points">Max. Punkte</label>
+            <input id="da3Points" type="number" value="500000" min="1000" max="2000000" step="1000">
+          </div>
+          <div>
+            <label for="da3Resolution">Auflösung</label>
+            <input id="da3Resolution" type="number" value="392" min="224" max="1008" step="14">
+          </div>
+        </div>
+        <label for="da3Confidence">Konfidenz-Perzentil</label>
+        <input id="da3Confidence" type="number" value="20" min="0" max="99" step="1">
+      </section>
+
+      <div class="actions">
+        <button id="runFull" class="primary wide">Ganze Pipeline starten</button>
+        <button id="runExtract">Nur Frames</button>
+        <button id="runColmap">COLMAP + Bild</button>
+        <button id="runDa3">DA3 + Bild</button>
+        <button id="runVisualize">COLMAP rendern</button>
+        <button id="runVisualizeDa3">DA3 rendern</button>
+        <button id="cancel" class="danger" disabled>Abbrechen</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Pipeline Status</div>
+          <div id="stage" class="stage">Bereit</div>
+        </div>
+        <div id="badge" class="badge idle">idle</div>
+      </header>
+
+      <section class="metrics">
+        <article><span>Extrahierte Frames</span><strong id="frames">-</strong></article>
+        <article><span>COLMAP Bilder</span><strong id="registered">-</strong></article>
+        <article><span>COLMAP Punkte</span><strong id="points">-</strong></article>
+        <article><span>DA3 Bilder</span><strong id="da3ImagesMetric">-</strong></article>
+        <article><span>DA3 Punkte</span><strong id="da3PointsMetric">-</strong></article>
+        <article><span>DA3 Gerät</span><strong id="da3DeviceMetric">-</strong></article>
+        <article><span>Beobachtungen</span><strong id="observations">-</strong></article>
+        <article><span>Track-Länge</span><strong id="track">-</strong></article>
+        <article><span>Reprojektionsfehler</span><strong id="error">-</strong></article>
+      </section>
+
+      <section class="result-grid">
+        <article class="panel viewer">
+          <div class="panel-title">
+            <div>
+              <h2>COLMAP</h2>
+              <p>Gerenderte farbige COLMAP-Punktwolke</p>
+            </div>
+            <button id="refreshImage" class="compact">Aktualisieren</button>
+          </div>
+          <div id="imageEmpty" class="empty">Noch kein Screenshot vorhanden.</div>
+          <img id="resultImage" alt="COLMAP-Rekonstruktion">
+        </article>
+
+        <article class="panel viewer">
+          <div class="panel-title">
+            <div>
+              <h2>Depth Anything 3</h2>
+              <p>Fusionierte Mehrbild-Tiefenpunktwolke</p>
+            </div>
+            <button id="refreshDa3Image" class="compact">Aktualisieren</button>
+          </div>
+          <div id="da3ImageEmpty" class="empty">Noch kein DA3-Screenshot vorhanden.</div>
+          <img id="da3ResultImage" alt="Depth-Anything-3-Rekonstruktion">
+        </article>
+
+        <article class="panel log-panel">
+          <div class="panel-title">
+            <div>
+              <h2>Live-Log</h2>
+              <p id="timing">Noch kein Lauf gestartet.</p>
+            </div>
+          </div>
+          <pre id="log">Bereit.</pre>
+        </article>
+      </section>
+
+      <section class="downloads panel">
+        <div>
+          <h2>Ergebnisdateien</h2>
+          <p>Modell und Extraktionsdaten direkt herunterladen.</p>
+        </div>
+        <div class="download-actions">
+          <a id="modelLink" href="/result/model" download>COLMAP PLY</a>
+          <a id="imageLink" href="/result/screenshot" download>COLMAP Bild</a>
+          <a id="da3ModelLink" href="/result/da3-model" download>DA3 PLY</a>
+          <a id="da3ImageLink" href="/result/da3-screenshot" download>DA3 Bild</a>
+          <a id="da3MetadataLink" href="/result/da3-metadata" download>DA3 Metadaten</a>
+          <a id="manifestLink" href="/result/manifest" download>Frame-Manifest</a>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

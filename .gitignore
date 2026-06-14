@@ -1,5 +1,15 @@
 .venv/
+.venv-vggt/
+.venv-da3/
+.venv-da3
 __pycache__/
 *.py[cod]
 .DS_Store
 a5/data/*/images/
+a5/colmap/database.db
+a5/colmap/database.db-shm
+a5/colmap/database.db-wal
+a5/colmap/sparse/
+a5/colmap/sparse_text/
+a5/vendor/
+a5/video/*

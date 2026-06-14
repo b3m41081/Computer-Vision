@@ -1,148 +1,221 @@
 # A5: 3D Reconstruction
 
-This assignment documents a 3D reconstruction workflow, exports a colored point
-cloud, and includes a small dependency-free 3D renderer for the final result.
+This assignment reconstructs a scene from an iPhone video with two independent
+methods:
 
-## Capture Setup
+- COLMAP estimates camera poses and creates a sparse feature point cloud.
+- Depth Anything 3 (DA3) predicts multi-view depth and cameras and fuses the
+  depth maps into a dense colored point cloud.
 
-The scene is the outdoor stone sculpture already captured for A4. The images
-were taken with an iPhone 15 Pro as `6048 x 6048` JPEGs under daylight. The
-camera was moved approximately `0.15 m` horizontally between the two images.
-The rough stone surface is useful because it contains many local features. The
-white stone, windows, railings, vegetation, and reflections are more difficult
-because they contain repeated patterns, weak texture, and occlusions.
+The local web interface extracts video frames, runs both methods, renders the
+results, displays live logs and offers all generated files for download.
 
-The original images are not duplicated in `a5`, in accordance with the
-submission rule. The current reproducible fallback reads the existing A4
-results from:
+## Input
 
-```text
-a4/output/test_nd256_b7_u10/02_rectified_left.png
-a4/output/test_nd256_b7_u10/08_depth.npy
+Videos belong in `a5/video/`. The current inputs include `IMG_6753.MOV`,
+`IMG_6757.MOV` and `IMG_6758.MOV`. Frames are extracted to
+`a5/data/scene/images/`; generated frames are not committed and can always be
+recreated from the video.
+
+COLMAP uses all extracted frames. DA3 samples a configurable number of views
+from the same set and internally resizes them to its selected processing
+resolution.
+
+## Native macOS Setup
+
+Install the native tools:
+
+```bash
+brew install ffmpeg colmap python@3.11
 ```
 
-For a proper new multi-view capture, images should be placed in
-`a5/data/scene/images/` and should have approximately 70-80% overlap. Exposure,
-focus, and focal length should remain fixed while moving around the object.
+Create the environments from the repository root:
 
-## Model Choice: VGGT
+```bash
+python3.11 -m venv .venv
+.venv/bin/pip install -r a5/requirements-docker.txt
 
-The selected geometric foundation model is
-[VGGT](https://github.com/facebookresearch/vggt) (CVPR 2025). It was chosen
-because it predicts camera parameters, depth maps, point maps, and tracks in a
-single feed-forward model. Its official repository also provides a Viser
-viewer and `demo_colmap.py`, which exports predictions in COLMAP format. This
-makes it a better fit for the complete assignment pipeline than a model that
-only estimates monocular depth.
+python3.11 -m venv .venv-da3
+.venv-da3/bin/pip install -r a5/requirements-da3.txt
+git clone https://github.com/ByteDance-Seed/Depth-Anything-3.git \
+  a5/vendor/depth-anything-3
+.venv-da3/bin/pip install --no-deps --editable a5/vendor/depth-anything-3
+```
 
-The official checkpoint is a 1B-parameter model and the reference quick start
-selects CUDA when available. The available machine is a 16 GB Apple M1 Pro,
-and neither CUDA nor COLMAP is installed. Therefore, the VGGT inference and
-COLMAP stages were not claimed as completed locally. The repository includes
-reproducible runners for both stages, while the submitted point cloud is an
-explicitly labeled classical stereo fallback based on the real captured pair.
+The first DA3 run downloads the selected checkpoint from Hugging Face. The
+default `depth-anything/DA3-SMALL` checkpoint is Apache-2.0 licensed and is the
+recommended model for a 16 GB Apple Silicon Mac. `DA3-LARGE-1.1` is much more
+memory intensive and has a non-commercial CC BY-NC 4.0 license.
+
+Start the complete native interface:
+
+```bash
+./a5/start_native_macos.sh
+```
+
+Open `http://127.0.0.1:8766`. The launcher gives DA3 access to Apple MPS, which
+is not available inside Docker Desktop. Keep the device set to **Automatisch**
+or select **Apple MPS** explicitly.
+
+## Web Pipeline
+
+In the interface:
+
+1. Select a video and configure frame extraction.
+2. Keep DA3 Small, 4 images, resolution 392 and 500,000 maximum points for a
+   reliable first run on a 16 GB Mac.
+3. Click **Ganze Pipeline starten** to run extraction, COLMAP, DA3 and both
+   renderers.
+
+For more detail, raise the DA3 resolution in multiples of 14. Values such as
+`504` or `560` create more depth samples but require more unified memory. More
+input images improve scene coverage but also increase memory use. The maximum
+PLY point count controls output density after inference; it does not change
+the neural network's processing resolution.
+
+DA3 failure does not discard a successful COLMAP result during a full pipeline
+run. Running **DA3 + Bild** alone remains strict and reports an error if DA3
+cannot finish.
+
+## Direct Commands
+
+Extract frames and run COLMAP:
+
+```bash
+.venv/bin/python a5/src/extract_video_frames.py \
+  --video a5/video/IMG_6758.MOV \
+  --interval 0.3 \
+  --max-frames 60 \
+  --min-blur-score 9 \
+  --max-size 1760
+
+.venv/bin/python a5/src/run_colmap.py \
+  --overwrite \
+  --max-features 3072 \
+  --sequential-overlap 5
+```
+
+Run DA3 natively with Apple MPS and render its result:
+
+```bash
+.venv-da3/bin/python a5/src/run_da3.py \
+  --device mps \
+  --model depth-anything/DA3-SMALL \
+  --max-images 4 \
+  --resolution 392 \
+  --max-points 500000 \
+  --confidence-percentile 20
+
+.venv/bin/python a5/src/visualize.py a5/da3/points.ply \
+  --screenshot a5/img/da3_reconstruction.png \
+  --title "A5 - Depth Anything 3 reconstruction" \
+  --point-radius 2
+```
+
+`--device auto` selects CUDA, then MPS, then CPU. Automatic processing
+resolutions are 504 on CUDA, 392 on MPS and 336 on CPU.
+
+## Docker and CUDA
+
+Build and start the web interface with Docker:
+
+```bash
+docker compose build
+docker compose up -d web
+```
+
+The repository is mounted at `/workspace`, so all results are written back to
+`a5/`. On macOS, DA3 runs on CPU in Docker and is slower than native MPS.
+
+On Linux with an NVIDIA driver and NVIDIA Container Toolkit, enable CUDA with:
+
+```bash
+docker compose -f compose.yaml -f compose.cuda.yaml up -d web
+```
+
+The same web settings then work with CUDA. DA3 Base or Large can be selected
+when enough GPU memory is available.
+
+## Results
+
+The current COLMAP result was generated from `IMG_6753.MOV`. The verified DA3
+MPS result below was generated from `IMG_6758.MOV` before the input frames were
+changed. Starting **DA3 + Bild** regenerates it from the current frame set.
+
+| Measurement | Result |
+| --- | ---: |
+| Extracted frames | 61 |
+| Blurry frames rejected | 35 |
+| Registered COLMAP images | 61 / 61 |
+| COLMAP sparse points | 18,572 |
+| COLMAP observations | 119,077 |
+| Mean COLMAP track length | 6.41 |
+| Mean COLMAP reprojection error | 0.73 px |
+| DA3 input views | 4 |
+| DA3 processing resolution | 392 |
+| DA3 colored points | 279,580 |
+| DA3 device | Apple MPS |
+| DA3 inference and export | 4.33 s |
+
+COLMAP output:
+
+```text
+a5/colmap/sparse_points.ply
+a5/colmap/sparse_text/
+a5/img/colmap_sparse.png
+```
+
+DA3 output:
+
+```text
+a5/da3/points.ply
+a5/da3/cameras.npz
+a5/da3/metadata.json
+a5/img/da3_reconstruction.png
+```
+
+![COLMAP sparse reconstruction](img/colmap_sparse.png)
+
+![Depth Anything 3 reconstruction](img/da3_reconstruction.png)
+
+## Discussion
+
+COLMAP provides a geometrically consistent but sparse result based on matched
+image features. DA3 creates a much denser cloud because every accepted depth
+pixel can become a 3D point. Its geometry is learned rather than triangulated,
+so low-texture areas are filled more completely, while independently predicted
+views can still show small alignment or depth inconsistencies.
+
+Increasing only the screenshot size does not add geometric detail. For a less
+pixelated model, raise DA3's processing resolution, retain more points and use
+several overlapping views. A steady camera path, diffuse lighting and limited
+motion in the scene remain important for both methods.
 
 ## Project Structure
 
 ```text
 a5/
   README.md
-  Workshop-05-3DReconstruction.md
+  video/
+  data/scene/
+  colmap/
+  da3/
+  img/
   src/
-    export_point_cloud.py  # depth map to colored PLY
-    visualize.py           # PLY renderer and screenshot export
-    run_colmap.py          # standard COLMAP sparse reconstruction
-    run_vggt.py            # wrapper for VGGT's official demo_colmap.py
-  output/
-    final_reconstruction.ply
-    final_reconstruction.json
-    visualization.png
+    extract_video_frames.py
+    run_colmap.py
+    run_da3.py
+    visualize.py
+    web_ui.py
+    web/
 ```
 
-## Reproduce the Submitted Result
-
-Run from the repository root:
-
-```bash
-.venv/bin/python a5/src/export_point_cloud.py
-.venv/bin/python a5/src/visualize.py
-```
-
-The PLY is ASCII and can also be opened directly in MeshLab. To inspect it in
-the included interactive viewer:
-
-```bash
-.venv/bin/python a5/src/visualize.py --interactive
-```
-
-Controls are `W/A/S/D` for rotation, `+/-` for zoom, and `Q` or `Esc` to quit.
-The non-interactive mode works without a display and always writes the
-screenshot.
-
-## COLMAP Workflow
-
-After adding at least three overlapping images, run:
-
-```bash
-.venv/bin/python a5/src/run_colmap.py \
-  --images a5/data/scene/images \
-  --workspace a5/colmap
-```
-
-The script performs feature extraction, exhaustive matching, mapping, and
-conversion to both text and PLY formats. It stops with a clear error if COLMAP
-is missing or the image sequence is too small.
-
-## VGGT Workflow
-
-Install VGGT in a separate environment according to its official README. Then
-run its official COLMAP export through the included wrapper:
-
-```bash
-python a5/src/run_vggt.py \
-  --vggt-repo /path/to/vggt \
-  --scene-dir a5/data/scene \
-  --use-ba
-```
-
-`a5/data/scene/images/` must contain only the input images. VGGT writes camera
-parameters and 3D points to `a5/data/scene/sparse/` in COLMAP format.
-
-## Current Result
-
-The fallback uses the rectified left image for color and the metric A4 depth
-map for geometry. Intrinsics use the previously documented scaled focal length
-of `1296.30 px`, with the principal point at the image center. Points outside
-`0.8-20.0 m` are rejected because the stereo matcher produces extreme depths
-for disparities close to zero.
-
-- Valid points before sampling: `197,352`
-- Exported colored points: `150,000`
-- PLY size: approximately `5.1 MB`
-- Depth unit: meters, based on the estimated `0.15 m` baseline
-
-![Final 3D visualization](output/visualization.png)
-
-## Failure Cases and Discussion
-
-The stone sculpture is the most coherent part of the reconstruction. Its rough
-surface yields distinctive correspondences, and the side view reveals a clear
-depth variation rather than a flat image plane.
-
-The point cloud is incomplete and contains streaks. Textureless white areas
-produce ambiguous matches, while vegetation and railings create repeated thin
-structures. Occlusions and reflections violate the assumptions of dense stereo.
-Depth also becomes unstable when disparity approaches zero, so the far
-background must be clipped.
-
-The largest limitation is the capture itself: two images are enough for a
-stereo fallback but not for a robust full-object COLMAP reconstruction. A final
-VGGT experiment should use 20-40 sharp images around the object. That would
-reduce holes, provide camera poses around the complete sculpture, and make a
-comparison between COLMAP, VGGT, and classical stereo meaningful.
+The old `run_vggt.py` runner and existing `a5/vggt/` files are retained only
+as previous experiment artifacts. The active pipeline and web interface use
+Depth Anything 3.
 
 ## References
 
-- [VGGT official repository](https://github.com/facebookresearch/vggt)
-- [VGGT paper](https://arxiv.org/abs/2503.11651)
+- [Depth Anything 3 official repository](https://github.com/ByteDance-Seed/Depth-Anything-3)
+- [Depth Anything 3 paper](https://arxiv.org/abs/2511.10647)
 - [COLMAP documentation](https://colmap.github.io/)
