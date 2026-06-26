@@ -1,16 +1,10 @@
 import argparse
-import os
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-
-
-def running_in_docker():
-    return Path("/.dockerenv").exists() or os.environ.get("A5_DOCKER") == "1"
 
 
 def run(command):
@@ -46,7 +40,7 @@ def image_count(image_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run a standard COLMAP sparse reconstruction.")
-    parser.add_argument("--images", type=Path, default=BASE_DIR / "data" / "scene" / "images")
+    parser.add_argument("--images", type=Path, default=BASE_DIR / "data" / "scene" / "images_colmap_ql")
     parser.add_argument("--workspace", type=Path, default=BASE_DIR / "colmap")
     parser.add_argument("--camera-model", default="SIMPLE_RADIAL")
     parser.add_argument(
@@ -57,15 +51,83 @@ def parse_args():
     parser.add_argument(
         "--use-gpu",
         action="store_true",
-        help="Use CUDA for SIFT. Leave disabled for Docker Desktop on macOS.",
+        help="Use CUDA for SIFT if the installed COLMAP build supports it.",
     )
-    parser.add_argument("--max-features", type=int, default=4096)
-    parser.add_argument("--num-threads", type=int, default=2 if running_in_docker() else 4)
-    parser.add_argument("--sequential-overlap", type=int, default=5)
+    parser.add_argument("--max-features", type=int, default=20000)
+    parser.add_argument(
+        "--feature-max-image-size",
+        type=int,
+        default=0,
+        help="Resize the longest image side for feature extraction only; 0 keeps original size.",
+    )
+    parser.add_argument(
+        "--sift-peak-threshold",
+        type=float,
+        default=0.004,
+        help="Lower values extract more SIFT features; COLMAP default is usually around 0.0067.",
+    )
+    parser.add_argument(
+        "--max-orientations",
+        type=int,
+        default=2,
+        help="Maximum orientations per SIFT feature. Higher values can create more matches.",
+    )
+    parser.add_argument("--num-threads", type=int, default=4)
+    parser.add_argument("--sequential-overlap", type=int, default=10)
+    parser.add_argument(
+        "--guided-matching",
+        dest="guided_matching",
+        action="store_true",
+        default=True,
+        help="Run geometric guided matching after the initial feature matches.",
+    )
+    parser.add_argument(
+        "--no-guided-matching",
+        dest="guided_matching",
+        action="store_false",
+        help="Disable guided matching for a faster but usually sparser run.",
+    )
+    parser.add_argument(
+        "--mapper-min-num-matches",
+        type=int,
+        default=15,
+        help="Minimum verified matches for image pairs used by the mapper.",
+    )
+    parser.add_argument(
+        "--mapper-init-min-num-inliers",
+        type=int,
+        default=100,
+        help="Minimum inliers for the initial mapper image pair.",
+    )
+    parser.add_argument(
+        "--keep-two-view-tracks",
+        dest="keep_two_view_tracks",
+        action="store_true",
+        default=True,
+        help="Keep two-view tracks to produce a denser sparse point cloud.",
+    )
+    parser.add_argument(
+        "--drop-two-view-tracks",
+        dest="keep_two_view_tracks",
+        action="store_false",
+        help="Drop two-view tracks for a cleaner but usually sparser model.",
+    )
+    parser.add_argument(
+        "--mapper-filter-max-reproj-error",
+        type=float,
+        default=6.0,
+        help="Larger values keep more sparse points after mapper filtering.",
+    )
+    parser.add_argument(
+        "--mapper-filter-min-tri-angle",
+        type=float,
+        default=0.5,
+        help="Smaller values keep points from narrower baselines.",
+    )
     parser.add_argument(
         "--matcher",
         choices=("sequential", "exhaustive"),
-        default="sequential",
+        default="exhaustive",
     )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
@@ -109,18 +171,24 @@ def main():
     count = image_count(args.images)
     if count < 3:
         raise RuntimeError(f"COLMAP needs a real image sequence; found only {count} images in {args.images}")
-    if args.max_features <= 0 or args.num_threads <= 0 or args.sequential_overlap <= 0:
-        raise ValueError("Feature, thread, and overlap values must be positive")
+    if (
+        args.max_features <= 0
+        or args.num_threads <= 0
+        or args.sequential_overlap <= 0
+        or args.mapper_min_num_matches <= 0
+        or args.mapper_init_min_num_inliers <= 0
+        or args.max_orientations <= 0
+    ):
+        raise ValueError("Feature, thread, overlap, and mapper values must be positive")
+    if (
+        args.feature_max_image_size < 0
+        or args.sift_peak_threshold <= 0
+        or args.mapper_filter_max_reproj_error <= 0
+        or args.mapper_filter_min_tri_angle <= 0
+    ):
+        raise ValueError("Image size and threshold values must be zero or positive")
 
-    temporary_workspace = None
     work_workspace = args.local_workspace
-    if work_workspace is None and running_in_docker():
-        temporary_workspace = tempfile.TemporaryDirectory(prefix="a5-colmap-")
-        work_workspace = Path(temporary_workspace.name)
-        print(
-            "Docker detected: using container-local storage for the COLMAP database "
-            "to avoid SQLite errors on macOS bind mounts."
-        )
     if work_workspace is None:
         work_workspace = args.workspace
 
@@ -161,26 +229,33 @@ def main():
         "--SiftMatching.num_threads",
     )
 
-    run(
-        [
-            colmap,
-            "feature_extractor",
-            "--database_path",
-            database,
-            "--image_path",
-            args.images,
-            "--ImageReader.camera_model",
-            args.camera_model,
-            "--ImageReader.single_camera",
-            "0" if args.multiple_cameras else "1",
-            extraction_gpu_option,
-            "1" if args.use_gpu else "0",
-            extraction_threads_option,
-            args.num_threads,
-            "--SiftExtraction.max_num_features",
-            args.max_features,
-        ]
-    )
+    feature_command = [
+        colmap,
+        "feature_extractor",
+        "--database_path",
+        database,
+        "--image_path",
+        args.images,
+        "--ImageReader.camera_model",
+        args.camera_model,
+        "--ImageReader.single_camera",
+        "0" if args.multiple_cameras else "1",
+        extraction_gpu_option,
+        "1" if args.use_gpu else "0",
+        extraction_threads_option,
+        args.num_threads,
+        "--SiftExtraction.max_num_features",
+        args.max_features,
+        "--SiftExtraction.max_num_orientations",
+        args.max_orientations,
+        "--SiftExtraction.peak_threshold",
+        args.sift_peak_threshold,
+    ]
+    if args.feature_max_image_size:
+        feature_command.extend(
+            ["--FeatureExtraction.max_image_size", args.feature_max_image_size]
+        )
+    run(feature_command)
     matcher_command = [
         colmap,
         f"{args.matcher}_matcher",
@@ -189,7 +264,7 @@ def main():
         matching_gpu_option,
         "1" if args.use_gpu else "0",
         matching_threads_option,
-        1 if not args.use_gpu else args.num_threads,
+        args.num_threads,
     ]
     if args.matcher == "sequential":
         matcher_command.extend(["--SequentialMatching.overlap", args.sequential_overlap])
@@ -200,19 +275,40 @@ def main():
         cpu_brute_force_option,
     ):
         matcher_command.extend([cpu_brute_force_option, "1"])
+    guided_matching_option = "--FeatureMatching.guided_matching"
+    if args.guided_matching and supports_option(
+        colmap,
+        f"{args.matcher}_matcher",
+        guided_matching_option,
+    ):
+        matcher_command.extend([guided_matching_option, "1"])
     run(matcher_command)
-    run(
-        [
-            colmap,
-            "mapper",
-            "--database_path",
-            database,
-            "--image_path",
-            args.images,
-            "--output_path",
-            sparse,
-        ]
-    )
+    mapper_command = [
+        colmap,
+        "mapper",
+        "--database_path",
+        database,
+        "--image_path",
+        args.images,
+        "--output_path",
+        sparse,
+        "--Mapper.num_threads",
+        args.num_threads,
+        "--Mapper.min_num_matches",
+        args.mapper_min_num_matches,
+        "--Mapper.init_min_num_inliers",
+        args.mapper_init_min_num_inliers,
+        "--Mapper.tri_ignore_two_view_tracks",
+        "0" if args.keep_two_view_tracks else "1",
+    ]
+    mapper_options = {
+        "--Mapper.filter_max_reproj_error": args.mapper_filter_max_reproj_error,
+        "--Mapper.filter_min_tri_angle": args.mapper_filter_min_tri_angle,
+    }
+    for option, value in mapper_options.items():
+        if supports_option(colmap, "mapper", option):
+            mapper_command.extend([option, value])
+    run(mapper_command)
 
     models = sorted(path for path in sparse.iterdir() if path.is_dir())
     if not models:
@@ -244,8 +340,6 @@ def main():
     if work_workspace.resolve() != args.workspace.resolve():
         publish_result(work_workspace, args.workspace, args.overwrite)
     print(f"Sparse reconstruction: {models[0]}")
-    if temporary_workspace is not None:
-        temporary_workspace.cleanup()
 
 
 if __name__ == "__main__":

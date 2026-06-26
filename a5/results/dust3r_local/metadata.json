@@ -1,0 +1,17 @@
+{
+  "model": "naver/DUSt3R_ViTLarge_BaseDecoder_512_dpt",
+  "device": "cpu",
+  "image_size": 224,
+  "scene_graph": "complete",
+  "image_count": 6,
+  "point_count": 229519,
+  "images": [
+    "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a5/data/scene/images_colmap_ql/IMG_6852.DNG.png",
+    "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a5/data/scene/images_colmap_ql/IMG_6853.DNG.png",
+    "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a5/data/scene/images_colmap_ql/IMG_6854.DNG.png",
+    "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a5/data/scene/images_colmap_ql/IMG_6855.DNG.png",
+    "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a5/data/scene/images_colmap_ql/IMG_6856.DNG.png",
+    "/Users/unknownacc/Documents/Studium/Master/SS/Computer Vision/git/Computer-Vision/a5/data/scene/images_colmap_ql/IMG_6857.DNG.png"
+  ],
+  "output": "a5/results/dust3r_local/dust3r_points.ply"
+}
