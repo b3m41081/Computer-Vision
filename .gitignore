@@ -2,10 +2,12 @@
 .venv-vggt/
 .venv-da3/
 .venv-da3
+a5/.venv-dust3r/
 __pycache__/
 *.py[cod]
 .DS_Store
 a5/data/*/images/
+a5/data/*/images_colmap_ql/
 a5/colmap/database.db
 a5/colmap/database.db-shm
 a5/colmap/database.db-wal
@@ -13,3 +15,6 @@ a5/colmap/sparse/
 a5/colmap/sparse_text/
 a5/vendor/
 a5/video/*
+a5/results/colmap/database.db
+a5/results/dust3r_local_512_8img/dust3r_points.ply
+a5/results/3D Splats App/splat-trained.ply

@@ -1,5 +1,0 @@
-services:
-  web:
-    gpus: all
-    environment:
-      DA3_DEVICE: cuda

@@ -12,7 +12,8 @@ measurement, and stereo reconstruction.
 ├── a1/   Camera Calibration
 ├── a2/   Single-View Height Measurement
 ├── a3/   Simple Stereo
-└── a4/   Own Stereo Rectification
+├── a4/   Own Stereo Rectification
+└── a5/   3D Reconstruction with COLMAP and DUSt3R
 ```
 
 ### A1: Camera Calibration
@@ -84,11 +85,27 @@ Run from the project root:
 
 More details are available in [`a4/README.md`](a4/README.md).
 
+### A5: 3D Reconstruction
+
+Workshop 5 reconstructs a captured scene from prepared image files. The active
+pipeline first runs COLMAP for sparse structure-from-motion and then runs
+DUSt3R locally on macOS for the learned 3D reconstruction result.
+
+Run from the project root:
+
+```bash
+./a5/start_native_macos.sh
+./a5/start_dust3r_macos.sh --dust3r-repo ../dust3r
+```
+
+More details are available in [`a5/README.md`](a5/README.md).
+
 ## Requirements
 
 - Python 3
 - OpenCV
 - NumPy
+- COLMAP for `a5`
 - a webcam for the live examples in `a1`
 
 Install the Python dependencies:
@@ -130,6 +147,12 @@ a4/
 ├── images/               # own left/right stereo pair
 ├── output/               # rectification, disparity, and depth exports
 └── src/                  # uncalibrated stereo rectification pipeline
+
+a5/
+├── data/scene/            # original and prepared reconstruction images
+├── img/                   # rendered COLMAP screenshot
+├── results/               # final model exports and screenshots
+└── src/                   # COLMAP, DUSt3R, and visualization scripts
 ```
 
 ## Notes
